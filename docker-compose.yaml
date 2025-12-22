@@ -44,8 +44,8 @@ services:
     image: "mariadb:12"
     environment:
       MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
-      MYSQL_USER: ${WORDPRESS_DB_USER}
-      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      MYSQL_USER: ${SERVICE_USER_DB:?}
+      MYSQL_PASSWORD: ${SERVICE_PASSWORD_DB:?}
       MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_ROOTDB:?}
     volumes:
       - "db_data:/var/lib/mysql"
