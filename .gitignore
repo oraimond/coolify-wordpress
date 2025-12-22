@@ -1,2 +1,2 @@
-/wp/*
-!/wp/.gitkeep
+/wordpress/*
+!/wordpress/.gitkeep

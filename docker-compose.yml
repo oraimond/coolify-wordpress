@@ -1,50 +1,46 @@
-version: '3.9'
+version: "3.9"
 services:
   nginx:
-    image: 'nginx:1.26-alpine'
-    container_name: wp-nginx
+    image: "nginx:1.26-alpine"
     expose:
-      - '80'
+      - "80"
     depends_on:
       - php
     volumes:
-      - './wordpress:/var/www/html'
-      - './nginx/nginx.conf:/etc/nginx/nginx.conf:ro'
-      - './nginx/default.conf:/etc/nginx/conf.d/default.conf:ro'
-      - 'nginx_cache:/var/cache/nginx'
+      - "./wordpress:/var/www/html"
+      - "./nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
+      - "./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro"
+      - "nginx_cache:/var/cache/nginx"
     restart: unless-stopped
   php:
-    image: 'wordpress:php8.5-fpm-alpine'
-    container_name: wp-php
+    image: "wordpress:php8.5-fpm-alpine"
     depends_on:
       - db
       - redis
     environment:
       WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: wordpress
-      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
     volumes:
-      - './wordpress:/var/www/html'
-      - './php/php.ini:/usr/local/etc/php/conf.d/zzz-custom.ini'
+      - "./wordpress:/var/www/html"
+      - "./php/php.ini:/usr/local/etc/php/conf.d/zzz-custom.ini"
     restart: unless-stopped
   db:
-    image: 'mariadb:12'
-    container_name: wp-db
+    image: "mariadb:12"
     environment:
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: wordpress
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
-      - 'db_data:/var/lib/mysql'
+      - "db_data:/var/lib/mysql"
     command:
-      - '--innodb-buffer-pool-size=1G'
-      - '--innodb-flush-log-at-trx-commit=2'
+      - "--innodb-buffer-pool-size=1G"
+      - "--innodb-flush-log-at-trx-commit=2"
     restart: unless-stopped
   redis:
-    image: 'redis:7-alpine'
-    container_name: wp-redis
+    image: "redis:7-alpine"
     restart: unless-stopped
 volumes:
   db_data: null
