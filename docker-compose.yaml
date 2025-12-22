@@ -2,8 +2,6 @@ version: "3.9"
 services:
   nginx:
     image: "nginx:1.29-alpine"
-    # expose:
-    #   - "80"
     depends_on:
       - php
     volumes:
@@ -95,6 +93,11 @@ services:
             }
           }
       - "nginx_cache:/var/cache/nginx"
+    healthcheck:
+      test: ["CMD", "pgrep", "nginx"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
   php:
     image: "wordpress:php8.5-fpm-alpine"
@@ -123,6 +126,11 @@ services:
           opcache.max_accelerated_files=100000
           opcache.validate_timestamps=0
           opcache.revalidate_freq=0
+    healthcheck:
+      test: ["CMD", "pgrep", "php-fpm"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
   db:
     image: "mariadb:12"
@@ -136,9 +144,19 @@ services:
     command:
       - "--innodb-buffer-pool-size=1G"
       - "--innodb-flush-log-at-trx-commit=2"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 20s
+      retries: 10
     restart: unless-stopped
   redis:
     image: "redis:8-alpine"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     restart: unless-stopped
 volumes:
   db_data: null
