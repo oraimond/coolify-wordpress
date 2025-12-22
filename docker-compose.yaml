@@ -5,7 +5,7 @@ services:
     expose:
       - "80"
     depends_on:
-      - wordpress
+      - php
     volumes:
       - "./wordpress:/var/www/html"
       - type: bind
@@ -96,7 +96,7 @@ services:
           }
       - "nginx_cache:/var/cache/nginx"
     restart: unless-stopped
-  wordpress:
+  php:
     image: "wordpress:php8.5-fpm-alpine"
     depends_on:
       - db
