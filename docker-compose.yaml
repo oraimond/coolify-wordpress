@@ -119,7 +119,10 @@ services:
       retries: 3
     restart: unless-stopped
   php:
-    image: "wordpress:php8.5-fpm-alpine"
+    # image: "wordpress:php8.5-fpm-alpine"
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
     depends_on:
       - db
       - redis
