@@ -34,7 +34,11 @@ services:
       WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
     volumes:
       - "./wordpress:/var/www/html"
-      - "./php/php.ini:/usr/local/etc/php/conf.d/zzz-custom.ini"
+      - type: bind
+        source: ./php/php.ini
+        target: /usr/local/etc/php/conf.d/zzz-custom.ini
+        is_directory: false
+        content: ""
     restart: unless-stopped
   db:
     image: "mariadb:12"
