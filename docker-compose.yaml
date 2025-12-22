@@ -13,13 +13,13 @@ services:
         target: /etc/nginx/nginx.conf
         read_only: true
         is_directory: false
-        content: ""
+        # content: ""
       - type: bind
         source: ./nginx/default.conf
         target: /etc/nginx/conf.d/default.conf
         read_only: true
         is_directory: false
-        content: ""
+        # content: ""
       - "nginx_cache:/var/cache/nginx"
     restart: unless-stopped
   wordpress:
@@ -38,7 +38,7 @@ services:
         source: ./php/php.ini
         target: /usr/local/etc/php/conf.d/zzz-custom.ini
         is_directory: false
-        content: ""
+        # content: ""
     restart: unless-stopped
   db:
     image: "mariadb:12"
