@@ -131,6 +131,10 @@ services:
       WP_REDIS_HOST: redis
       WP_REDIS_PORT: 6379
       WP_REDIS_DATABASE: 0
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_REDIS_HOST', getenv('WP_REDIS_HOST') ?: 'redis');
+        define('WP_REDIS_PORT', getenv('WP_REDIS_PORT') ?: 6379);
+        define('WP_REDIS_DATABASE', getenv('WP_REDIS_DATABASE') ?: 0);
     volumes:
       - "./wordpress:/var/www/html"
       - type: bind
