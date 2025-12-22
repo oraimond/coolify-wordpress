@@ -29,9 +29,9 @@ services:
       - redis
     environment:
       WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
-      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
-      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?wordpress}
+      WORDPRESS_DB_USER: ${SERVICE_USER_DB:?}
+      WORDPRESS_DB_PASSWORD: ${SERVICE_PASSWORD_DB:?}
     volumes:
       - "./wordpress:/var/www/html"
       - type: bind
@@ -46,7 +46,7 @@ services:
       MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
       MYSQL_USER: ${WORDPRESS_DB_USER}
       MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_ROOTDB:?}
     volumes:
       - "db_data:/var/lib/mysql"
     command:
