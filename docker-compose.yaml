@@ -55,6 +55,12 @@ services:
 
             index index.php;
 
+            # Security headers
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
             set $skip_cache 0;
 
             if ($request_method = POST) {
@@ -81,18 +87,31 @@ services:
               fastcgi_cache WORDPRESS;
               fastcgi_cache_bypass $skip_cache;
               fastcgi_no_cache $skip_cache;
-
               fastcgi_cache_valid 200 60m;
+              fastcgi_cache_valid 404 10m;
               add_header X-FastCGI-Cache $upstream_cache_status;
             }
 
-            location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff2?)$ {
-              expires 365d;
+            location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff2?|webp)$ {
+              expires 1y;
               add_header Cache-Control "public, immutable";
               access_log off;
             }
+
+            # Block access to sensitive files
+            location ~ /\. {
+              deny all;
+            }
           }
       - "nginx_cache:/var/cache/nginx"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
     healthcheck:
       test: ["CMD", "pgrep", "nginx"]
       interval: 30s
@@ -109,6 +128,9 @@ services:
       WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?wordpress}
       WORDPRESS_DB_USER: ${SERVICE_USER_DB:?}
       WORDPRESS_DB_PASSWORD: ${SERVICE_PASSWORD_DB:?}
+      WP_REDIS_HOST: redis
+      WP_REDIS_PORT: 6379
+      WP_REDIS_DATABASE: 0
     volumes:
       - "./wordpress:/var/www/html"
       - type: bind
@@ -126,6 +148,16 @@ services:
           opcache.max_accelerated_files=100000
           opcache.validate_timestamps=0
           opcache.revalidate_freq=0
+          opcache.jit=on
+          opcache.jit_buffer_size=100M
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
     healthcheck:
       test: ["CMD", "pgrep", "php-fpm"]
       interval: 10s
@@ -142,8 +174,22 @@ services:
     volumes:
       - "db_data:/var/lib/mysql"
     command:
-      - "--innodb-buffer-pool-size=1G"
+      - "--innodb-buffer-pool-size=4G"
       - "--innodb-flush-log-at-trx-commit=2"
+      - "--innodb-log-file-size=256M"
+      - "--innodb-log-buffer-size=16M"
+      - "--query-cache-size=64M"
+      - "--query-cache-type=1"
+      - "--max-connections=200"
+      - "--innodb-thread-concurrency=16"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "1.0"
+          memory: 2G
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -152,6 +198,16 @@ services:
     restart: unless-stopped
   redis:
     image: "redis:8-alpine"
+    volumes:
+      - "redis_data:/data"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -161,3 +217,4 @@ services:
 volumes:
   db_data: null
   nginx_cache: null
+  redis_data: null
