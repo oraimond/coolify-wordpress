@@ -2,8 +2,8 @@ version: "3.9"
 services:
   nginx:
     image: "nginx:1.29-alpine"
-    expose:
-      - "80"
+    # expose:
+    #   - "80"
     depends_on:
       - php
     volumes:
