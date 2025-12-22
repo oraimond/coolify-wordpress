@@ -38,7 +38,7 @@ services:
         source: ./php/php.ini
         target: /usr/local/etc/php/conf.d/zzz-custom.ini
         is_directory: false
-        # content: ""
+        content: "testing"
     restart: unless-stopped
   db:
     image: "mariadb:12"
