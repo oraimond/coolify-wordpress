@@ -1,18 +1,18 @@
 version: "3.9"
 services:
   nginx:
-    image: "nginx:1.26-alpine"
+    image: "nginx:1.29-alpine"
     expose:
       - "80"
     depends_on:
-      - php
+      - wordpress
     volumes:
       - "./wordpress:/var/www/html"
       - "./nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
       - "./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro"
       - "nginx_cache:/var/cache/nginx"
     restart: unless-stopped
-  php:
+  wordpress:
     image: "wordpress:php8.5-fpm-alpine"
     depends_on:
       - db
@@ -40,7 +40,7 @@ services:
       - "--innodb-flush-log-at-trx-commit=2"
     restart: unless-stopped
   redis:
-    image: "redis:7-alpine"
+    image: "redis:8-alpine"
     restart: unless-stopped
 volumes:
   db_data: null
