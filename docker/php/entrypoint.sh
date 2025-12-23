@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Wait for WordPress to be installed
+until wp core is-installed --path=/var/www/html --quiet; do
+    echo "Waiting for WordPress to be installed..."
+    sleep 5
+done
+
 # Ensure plugins directory exists and is writable
 mkdir -p /var/www/html/wp-content/plugins
 chown -R www-data:www-data /var/www/html/wp-content/plugins

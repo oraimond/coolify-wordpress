@@ -5,7 +5,7 @@ services:
     depends_on:
       - php
     volumes:
-      - "./wordpress:/var/www/html"
+      - wordpress_data:/var/www/html
       - type: bind
         source: ./nginx/nginx.conf
         target: /etc/nginx/nginx.conf
@@ -139,7 +139,7 @@ services:
         define('WP_REDIS_PORT', getenv('WP_REDIS_PORT') ?: 6379);
         define('WP_REDIS_DATABASE', getenv('WP_REDIS_DATABASE') ?: 0);
     volumes:
-      - "./wordpress:/var/www/html"
+      - wordpress_data:/var/www/html
       - type: bind
         source: ./php/php.ini
         target: /usr/local/etc/php/conf.d/zzz-custom.ini
@@ -225,3 +225,4 @@ volumes:
   db_data: null
   nginx_cache: null
   redis_data: null
+  wordpress_data: null
