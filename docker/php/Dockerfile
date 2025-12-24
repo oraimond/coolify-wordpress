@@ -1,12 +1,22 @@
 # Dockerfile
 FROM wordpress:php8.5-fpm-alpine
 
-# Install necessary tools
-RUN apk add --no-cache bash curl libzip unzip less
+# Install runtime deps + build deps for PHP extensions
+RUN apk add --no-cache \
+    bash \
+    curl \
+    unzip \
+    less \
+    libzip-dev \
+    zip \
+    $PHPIZE_DEPS
 
-# Enable PHP zip extension
+# Build and enable PHP zip extension
 RUN docker-php-ext-configure zip \
     && docker-php-ext-install zip
+
+# Remove build deps to keep image small
+RUN apk del $PHPIZE_DEPS
 
 # Install WP-CLI
 RUN curl -o /usr/local/bin/wp -SL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
@@ -16,6 +26,5 @@ RUN curl -o /usr/local/bin/wp -SL https://raw.githubusercontent.com/wp-cli/build
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Use custom entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["php-fpm"]
