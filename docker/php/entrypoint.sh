@@ -21,6 +21,15 @@ if [ ! -d "/var/www/html/wp-content/plugins/redis-cache" ]; then
     chown -R www-data:www-data /var/www/html/wp-content/plugins/redis-cache
 fi
 
+# Install All-in-One WP Migration plugin if not already installed
+if [ ! -d "/var/www/html/wp-content/plugins/all-in-one-wp-migration" ]; then
+    echo "Installing All-in-One WP Migration plugin..."
+    curl -o /tmp/ai1wm.zip -SL https://downloads.wordpress.org/plugin/all-in-one-wp-migration.latest-stable.zip
+    unzip /tmp/ai1wm.zip -d /var/www/html/wp-content/plugins/
+    rm /tmp/ai1wm.zip
+    chown -R www-data:www-data /var/www/html/wp-content/plugins/all-in-one-wp-migration
+fi
+
 # Activate plugin if not activated
 # if ! wp plugin is-active redis-cache --path=/var/www/html --allow-root >/dev/null 2>&1; then
 #     echo "Activating Redis Object Cache plugin..."
