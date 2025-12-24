@@ -150,11 +150,11 @@ services:
           upload_max_filesize=64M
           post_max_size=64M
 
-          opcache.enable=1
-          opcache.memory_consumption=256
-          opcache.max_accelerated_files=100000
-          opcache.validate_timestamps=0
-          opcache.revalidate_freq=0
+          # opcache.enable=1
+          # opcache.memory_consumption=256
+          # opcache.max_accelerated_files=100000
+          # opcache.validate_timestamps=0
+          # opcache.revalidate_freq=0
           opcache.jit=on
           opcache.jit_buffer_size=100M
     deploy:
