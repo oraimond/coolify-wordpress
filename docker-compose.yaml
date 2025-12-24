@@ -53,6 +53,8 @@ services:
             server_name _;
             root /var/www/html;
 
+            client_max_body_size 1G;
+
             index index.php;
 
             # Security headers
