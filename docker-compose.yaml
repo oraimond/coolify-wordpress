@@ -68,7 +68,7 @@ services:
             # -------------------------
             # General client size limit
             # -------------------------
-            client_max_body_size 3G;
+            client_max_body_size 32M;
 
             # -------------------------
             # Microcaching for logged-out users
@@ -104,20 +104,7 @@ services:
             # -------------------------
             # Allow large uploads for admin endpoints only
             # -------------------------
-            location = /wp-admin/admin-ajax.php {
-                client_max_body_size 3G;
-
-                include fastcgi_params;
-                fastcgi_pass php:9000;
-                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-
-                fastcgi_read_timeout 7200;   # 2 hours
-                fastcgi_send_timeout 7200;   # 2 hours
-                fastcgi_buffering off;
-                fastcgi_request_buffering off;
-            }
-
-            location ~* ^/wp-admin/(update\.php|async-upload\.php)$ {
+            location ~* ^/wp-admin/(update\.php|async-upload\.php|admin-ajax\.php)$ {
                 client_max_body_size 1G;
 
                 include fastcgi_params;
@@ -212,12 +199,12 @@ services:
         target: /usr/local/etc/php/conf.d/zzz-custom.ini
         is_directory: false
         content: |
-          memory_limit=4G
-          max_execution_time=7200
-          upload_max_filesize=3G
-          post_max_size=3G
-          max_input_time = 7200
-          max_input_vars = 10000
+          memory_limit=1G
+          max_execution_time=3600
+          upload_max_filesize=1G
+          post_max_size=1G
+          max_input_time=3600
+          max_input_vars=10000
 
           # opcache.enable=1
           # opcache.memory_consumption=256
@@ -226,9 +213,6 @@ services:
           # opcache.revalidate_freq=0
           opcache.jit=on
           opcache.jit_buffer_size=100M
-
-          upload_tmp_dir=/var/www/html/tmp
-      - php_tmp:/var/www/html/tmp
     healthcheck:
       test: ["CMD", "pgrep", "php-fpm"]
       interval: 10s
@@ -274,4 +258,3 @@ volumes:
   nginx_cache: null
   redis_data: null
   wordpress_data: null
-  php_tmp: null
