@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Ensure PHP temp folder exists and is writable
+mkdir -p /var/www/html/tmp
+chown -R www-data:www-data /var/www/html/tmp
 
 # Wait for WordPress to be installed
 # until wp core is-installed --path=/var/www/html --quiet --allow-root; do

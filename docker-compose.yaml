@@ -226,6 +226,9 @@ services:
           # opcache.revalidate_freq=0
           opcache.jit=on
           opcache.jit_buffer_size=100M
+
+          upload_tmp_dir=/var/www/html/tmp
+      - php_tmp:/var/www/html/tmp
     healthcheck:
       test: ["CMD", "pgrep", "php-fpm"]
       interval: 10s
@@ -271,3 +274,4 @@ volumes:
   nginx_cache: null
   redis_data: null
   wordpress_data: null
+  php_tmp: null
