@@ -68,7 +68,7 @@ services:
             # -------------------------
             # General client size limit
             # -------------------------
-            client_max_body_size 32M;
+            client_max_body_size 3G;
 
             # -------------------------
             # Microcaching for logged-out users
