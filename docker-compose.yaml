@@ -145,10 +145,12 @@ services:
         target: /usr/local/etc/php/conf.d/zzz-custom.ini
         is_directory: false
         content: |
-          memory_limit=256M
-          max_execution_time=60
-          upload_max_filesize=64M
-          post_max_size=64M
+          memory_limit=1G
+          max_execution_time=600
+          upload_max_filesize=1G
+          post_max_size=1G
+          max_input_time = 600
+          max_input_vars = 10000
 
           # opcache.enable=1
           # opcache.memory_consumption=256
