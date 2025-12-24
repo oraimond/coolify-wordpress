@@ -53,88 +53,115 @@ services:
             server_name _;
             root /var/www/html;
 
-            client_max_body_size 1G;
-
             index index.php;
 
+            # -------------------------
             # Security headers
+            # -------------------------
             add_header X-Frame-Options "SAMEORIGIN" always;
             add_header X-Content-Type-Options "nosniff" always;
             add_header X-XSS-Protection "1; mode=block" always;
             add_header Referrer-Policy "no-referrer-when-downgrade" always;
 
+            # -------------------------
+            # General client size limit
+            # -------------------------
+            client_max_body_size 32M;
+
+            # -------------------------
+            # Microcaching for logged-out users
+            # -------------------------
             set $skip_cache 0;
 
-            if ($request_method = POST) {
-              set $skip_cache 1;
+            if ($request_method = POST) { set $skip_cache 1; }
+            if ($query_string != "") { set $skip_cache 1; }
+            if ($request_uri ~* "/wp-admin/|/wp-login.php") { set $skip_cache 1; }
+            if ($http_cookie ~* "wordpress_logged_in_") { set $skip_cache 1; }
+
+            # -------------------------
+            # Rate-limit login attempts
+            # -------------------------
+            limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+
+            location = /wp-login.php {
+                limit_req zone=login burst=3 nodelay;
+
+                include fastcgi_params;
+                fastcgi_pass php:9000;
+                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+                fastcgi_read_timeout 120;
             }
 
-            if ($query_string != "") {
-              set $skip_cache 1;
+            # -------------------------
+            # Lock down XML-RPC
+            # -------------------------
+            location = /xmlrpc.php {
+                deny all;
             }
 
-            if ($request_uri ~* "/wp-admin/|/wp-login.php") {
-              set $skip_cache 1;
+            # -------------------------
+            # Allow large uploads for admin endpoints only
+            # -------------------------
+            location ~* ^/wp-admin/(update\.php|async-upload\.php|admin-ajax\.php)$ {
+                client_max_body_size 1G;
+
+                include fastcgi_params;
+                fastcgi_pass php:9000;
+                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+                fastcgi_read_timeout 600;
+                fastcgi_send_timeout 600;
+                fastcgi_buffering off;
+                fastcgi_request_buffering off;
             }
 
-            location / {
-              try_files $uri $uri/ /index.php?$args;
-            }
-
-            # location ~ \.php$ {
-            #   include fastcgi_params;
-            #   fastcgi_pass php:9000;
-            #   fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-
-            #   fastcgi_cache WORDPRESS;
-            #   fastcgi_cache_bypass $skip_cache;
-            #   fastcgi_no_cache $skip_cache;
-            #   fastcgi_cache_valid 200 60m;
-            #   fastcgi_cache_valid 404 10m;
-            #   add_header X-FastCGI-Cache $upstream_cache_status;
-            # }
-
-            location ~* /wp-admin/.*\.php$ {
-              include fastcgi_params;
-              fastcgi_pass php:9000;
-              fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-
-              fastcgi_read_timeout 600;
-              fastcgi_buffering off;
-              fastcgi_request_buffering off;
-            }
-
+            # -------------------------
+            # PHP-FPM for all other requests
+            # -------------------------
             location ~ \.php$ {
-              include fastcgi_params;
-              fastcgi_pass php:9000;
-              fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                include fastcgi_params;
+                fastcgi_pass php:9000;
+                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
 
-              # 🔥 CRITICAL FIXES
-              fastcgi_read_timeout 600;
-              fastcgi_send_timeout 600;
-              fastcgi_connect_timeout 60;
+                # FastCGI timeouts
+                fastcgi_connect_timeout 60;
+                fastcgi_read_timeout 120;
 
-              fastcgi_buffering off;
-              fastcgi_request_buffering off;
+                # Enable buffering for frontend performance
+                fastcgi_buffering on;
 
-              # Cache only frontend, never admin
-              fastcgi_cache WORDPRESS;
-              fastcgi_cache_bypass $skip_cache;
-              fastcgi_no_cache $skip_cache;
+                # Cache frontend pages only
+                fastcgi_cache WORDPRESS;
+                fastcgi_cache_bypass $skip_cache;
+                fastcgi_no_cache $skip_cache;
+                fastcgi_cache_valid 200 60m;
+                fastcgi_cache_valid 404 10m;
 
-              add_header X-FastCGI-Cache $upstream_cache_status;
+                add_header X-FastCGI-Cache $upstream_cache_status;
             }
 
-
+            # -------------------------
+            # Static file caching
+            # -------------------------
             location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff2?|webp)$ {
-              expires 1y;
-              add_header Cache-Control "public, immutable";
-              access_log off;
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+                access_log off;
             }
 
-            # Block access to sensitive files
+            # -------------------------
+            # Default location
+            # -------------------------
+            location / {
+                try_files $uri $uri/ /index.php?$args;
+            }
+
+            # -------------------------
+            # Deny hidden/sensitive files
+            # -------------------------
             location ~ /\. {
-              deny all;
+                deny all;
             }
           }
       - "nginx_cache:/var/cache/nginx"
