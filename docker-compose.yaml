@@ -111,8 +111,8 @@ services:
                 fastcgi_pass php:9000;
                 fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
 
-                fastcgi_read_timeout 7200;   # 1 hour
-                fastcgi_send_timeout 7200;   # 1 hour
+                fastcgi_read_timeout 7200;   # 2 hours
+                fastcgi_send_timeout 7200;   # 2 hours
                 fastcgi_buffering off;
                 fastcgi_request_buffering off;
             }
