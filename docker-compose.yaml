@@ -79,18 +79,50 @@ services:
               try_files $uri $uri/ /index.php?$args;
             }
 
+            # location ~ \.php$ {
+            #   include fastcgi_params;
+            #   fastcgi_pass php:9000;
+            #   fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+            #   fastcgi_cache WORDPRESS;
+            #   fastcgi_cache_bypass $skip_cache;
+            #   fastcgi_no_cache $skip_cache;
+            #   fastcgi_cache_valid 200 60m;
+            #   fastcgi_cache_valid 404 10m;
+            #   add_header X-FastCGI-Cache $upstream_cache_status;
+            # }
+
+            location ~* /wp-admin/.*\.php$ {
+              include fastcgi_params;
+              fastcgi_pass php:9000;
+              fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+              fastcgi_read_timeout 600;
+              fastcgi_buffering off;
+              fastcgi_request_buffering off;
+            }
+
             location ~ \.php$ {
               include fastcgi_params;
               fastcgi_pass php:9000;
               fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
 
+              # 🔥 CRITICAL FIXES
+              fastcgi_read_timeout 600;
+              fastcgi_send_timeout 600;
+              fastcgi_connect_timeout 60;
+
+              fastcgi_buffering off;
+              fastcgi_request_buffering off;
+
+              # Cache only frontend, never admin
               fastcgi_cache WORDPRESS;
               fastcgi_cache_bypass $skip_cache;
               fastcgi_no_cache $skip_cache;
-              fastcgi_cache_valid 200 60m;
-              fastcgi_cache_valid 404 10m;
+
               add_header X-FastCGI-Cache $upstream_cache_status;
             }
+
 
             location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff2?|webp)$ {
               expires 1y;

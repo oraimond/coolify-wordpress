@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-# Call the original WordPress entrypoint
-exec docker-entrypoint.sh "$@"
 
 # Wait for WordPress to be installed
 # until wp core is-installed --path=/var/www/html --quiet --allow-root; do
@@ -29,3 +27,5 @@ fi
 #     wp plugin activate redis-cache --path=/var/www/html --allow-root
 # fi
 
+# Call the original WordPress entrypoint
+exec docker-entrypoint.sh "$@"
