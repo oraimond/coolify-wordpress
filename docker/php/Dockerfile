@@ -1,5 +1,5 @@
 # Dockerfile
-FROM wordpress:php8.5-fpm
+FROM wordpress:php8.5-fpm-alpine
 
 # Install runtime deps + build deps for PHP extensions
 RUN apk add --no-cache \
