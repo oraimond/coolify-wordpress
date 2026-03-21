@@ -238,9 +238,9 @@ cleanup_backups() {
     done
 
     # Step 3: ensure at least one 1-2 weeks old backup exists (or sunday backup)
-    local week_old=$(date -d '7 days ago' +%s)
-    local two_weeks_old=$(date -d '14 days ago' +%s)
-    local selected=""
+    week_old=$(date -d '7 days ago' +%s)
+    two_weeks_old=$(date -d '14 days ago' +%s)
+    selected=""
 
     # Find non-manual backup between 7 and 14 days
     mapfile -t candidates < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' -mtime +6 -mtime -14 -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk '{print $2}')
@@ -256,7 +256,7 @@ cleanup_backups() {
 
 case "$1" in
     backup)
-        local manual=1
+        manual=1
         if [ "$2" == "--auto" ] || [ "$2" == "-a" ]; then
             manual=0
         fi
@@ -270,6 +270,9 @@ case "$1" in
     restore)
         restore_backup "$2"
         ;;
+    list)
+        list_backups
+        ;;
     cleanup)
         cleanup_backups
         ;;
@@ -279,13 +282,15 @@ case "$1" in
         echo "Usage:"
         echo "  wp-backup backup [--auto]            Create a new backup (default = manual)"
         echo "  wp-backup restore [backup_file]      Restore from a backup file (interactive when omitted)"
-        echo "  wp-backup cleanup                    Apply retention policy"
+        echo "  wp-backup list                      List available backups"
+        echo "  wp-backup cleanup                   Apply retention policy"
         echo ""
         echo "Examples:"
         echo "  wp-backup backup"
         echo "  wp-backup backup --manual"
         echo "  wp-backup restore"
         echo "  wp-backup restore /backups/backup_20240321_120000.tar.gz"
+        echo "  wp-backup list"
         echo "  wp-backup cleanup"
         echo ""
         echo "Note: Backups are stored in /backups directory inside the container."
