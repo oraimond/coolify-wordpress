@@ -60,7 +60,7 @@ list_backups() {
 
     echo
     echo "Available backups (current: $(date +"%Y-%m-%d %H:%M:%S"))"
-    echo "----------------------------------------------------"
+    echo "-----------------------------------------------------------------------------------"
 
     mapfile -t backups < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -print | sort)
 
@@ -79,7 +79,7 @@ list_backups() {
         ((idx++))
     done
 
-    echo "----------------------------------------------------"
+    echo "-----------------------------------------------------------------------------------"
     echo
     return 0
 }
@@ -287,7 +287,7 @@ case "$1" in
         echo ""
         echo "Examples:"
         echo "  wp-backup backup"
-        echo "  wp-backup backup --manual"
+        echo "  wp-backup backup --auto"
         echo "  wp-backup restore"
         echo "  wp-backup restore /backups/backup_20240321_120000.tar.gz"
         echo "  wp-backup list"

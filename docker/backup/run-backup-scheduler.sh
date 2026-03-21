@@ -11,7 +11,7 @@ while true; do
     hour=$(date +"%H")
     today=$(date +"%Y-%m-%d")
 
-    if [ "$hour" = "02" ] && [ "$last_run_date" != "$today" ]; then
+    if [ "$hour" = "15" ] && [ "$last_run_date" != "$today" ]; then
         echo "[backup-scheduler] Starting automatic backup at $now"
         /usr/local/bin/wp-backup backup --auto
         /usr/local/bin/wp-backup cleanup
