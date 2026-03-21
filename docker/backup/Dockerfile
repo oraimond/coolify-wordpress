@@ -6,8 +6,7 @@ RUN apk add --no-cache \
     bash \
     tar \
     gzip \
-    busybox-suid \
-    busybox-cron \
+    dcron \
     && rm -rf /var/cache/apk/*
 
 # Create backup directory
