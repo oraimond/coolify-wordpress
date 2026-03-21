@@ -42,17 +42,41 @@ human_size() {
     echo "unknown"
 }
 
+allow_date() {
+    date -d "1970-01-01" +%s >/dev/null 2>&1
+}
+
 format_backup_timestamp() {
     local filename=$1
-    if [[ $filename =~ backup_([0-9]{8}_[0-9]{6})\.tar\.gz$ ]]; then
+    if [[ $filename =~ ^backup_([0-9]{8}_[0-9]{6})(?:_manual)?\.tar\.gz$ ]]; then
         local ts=${BASH_REMATCH[1]}
-        local d=${ts:0:8}
-        local t=${ts:9:6}
-        local formatted=$(date -d "${d:0:4}-${d:4:2}-${d:6:2} ${t:0:2}:${t:2:2}:${t:4:2}" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "$ts")
-        echo "$formatted"
+        local y=${ts:0:4}
+        local m=${ts:4:2}
+        local d=${ts:6:2}
+        local hh=${ts:9:2}
+        local mm=${ts:11:2}
+        local ss=${ts:13:2}
+        echo "$y-$m-$d $hh:$mm:$ss"
     else
         echo "unknown"
     fi
+}
+
+# day-of-week: Sunday=7, Monday=1, ..., Saturday=6
+weekday_from_date() {
+    local y=$1
+    local m=$2
+    local d=$3
+    if [ "$m" -le 2 ]; then
+        m=$((m+12))
+        y=$((y-1))
+    fi
+    local K=$((y % 100))
+    local J=$((y / 100))
+    local h=$(( (d + (13*(m+1))/5 + K + K/4 + J/4 + 5*J) % 7 ))
+    local dow=$(( ((h+5) % 7) + 1 ))
+    # 1=Monday..7=Sunday
+    echo "$dow"
 }
 
 list_backups() {
@@ -197,62 +221,77 @@ restore_backup() {
     echo "WordPress has been restored from the backup."
 }
 
+file_mtime() {
+    local file=$1
+
+    if stat -c %Y "$file" >/dev/null 2>&1; then
+        stat -c %Y "$file"
+    else
+        stat -f %m "$file" 2>/dev/null
+    fi
+}
+
 cleanup_backups() {
-    local dir=/backups
-    local now=$(date +%s)
+    dir=/backups
+    now=$(date +%s 2>/dev/null || echo "$(/bin/date +%s)")
+    keep_recent=2
 
-    # Keep manual backups forever
-    local keep_recent=2
-    local recent_count=0
-
-    # Step 1: cleanup old and non-sunday regional backups
+    # Step 1: cleanup old and non-sunday backups (manual backups preserved automatically)
     find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' | while read -r f; do
-        local bname=$(basename "$f")
-        local ts=$(echo "$bname" | sed -E 's/^backup_([0-9]{8}_[0-9]{6}).*\.tar\.gz$/\1/')
+        bname=$(basename "$f")
+        ts=$(echo "$bname" | sed -E 's/^backup_([0-9]{8}_[0-9]{6}).*\.tar\.gz$/\1/')
         [ -z "$ts" ] && continue
-        local created=$(date -d "${ts:0:8} ${ts:9:6}" +%s 2>/dev/null || true)
-        [ -z "$created" ] && continue
 
-        local age=$(( (now-created) / 86400 ))
-        local dow=$(date -d "${ts:0:8} ${ts:9:6}" +%u 2>/dev/null || echo 0)
+        created_ts=$(file_mtime "$f")
+        [ -z "$created_ts" ] && continue
+
+        age=$(( (now - created_ts) / 86400 ))
+
+        yyyy=${ts:0:4}
+        mm=${ts:4:2}
+        dd=${ts:6:2}
+        dow=$(weekday_from_date "$yyyy" "$mm" "$dd")
 
         if [ "$age" -gt 14 ]; then
             rm -f "$f"
             continue
         fi
 
-        if [ "$age" -gt 3 ] && [ "$dow" != "7" ]; then
+        if [ "$age" -gt 3 ] && [ "$dow" -ne 7 ]; then
             rm -f "$f"
             continue
         fi
     done
 
     # Step 2: ensure at least 2 recent backups in last 72h
-    mapfile -t recent < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' -mtime -3 -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk '{print $2}')
-    for f in "${recent[@]}"; do
-        if [ "$recent_count" -lt "$keep_recent" ]; then
-            ((recent_count++))
-            continue
+    recent_items=()
+    while IFS= read -r -d '' f; do
+        created_ts=$(file_mtime "$f")
+        [ -z "$created_ts" ] && continue
+        age=$(( (now - created_ts) / 86400 ))
+        if [ "$age" -le 3 ]; then
+            recent_items+=("$created_ts:$f")
         fi
-        rm -f "$f"
-    done
+    done < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' -print0)
 
-    # Step 3: ensure at least one 1-2 weeks old backup exists (or sunday backup)
-    week_old=$(date -d '7 days ago' +%s)
-    two_weeks_old=$(date -d '14 days ago' +%s)
-    selected=""
-
-    # Find non-manual backup between 7 and 14 days
-    mapfile -t candidates < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' -mtime +6 -mtime -14 -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk '{print $2}')
-    if [ ${#candidates[@]} -gt 0 ]; then
-        selected=${candidates[0]}
+    if [ ${#recent_items[@]} -gt 0 ]; then
+        IFS=$'\n' sorted=($(printf '%s\n' "${recent_items[@]}" | sort -rn))
+        unset IFS
+        recent_count=0
+        for item in "${sorted[@]}"; do
+            f=${item#*:}
+            if [ "$recent_count" -lt "$keep_recent" ]; then
+                recent_count=$((recent_count+1))
+                continue
+            fi
+            rm -f "$f"
+        done
     fi
 
-    # Keep selected candidate if it exists and not already removed
-    if [ -n "$selected" ] && [ -f "$selected" ]; then
-        echo "Retaining 1-2 weeks backup: $selected"
-    fi
+    # Step 3: ensure at least one 1-2 weeks Sunday backup stays (in practice step 1 already retains recent Sunday backups up to 14d)
+    # no additional action required here unless you want explicit enforcement
 }
+
 
 case "$1" in
     backup)
