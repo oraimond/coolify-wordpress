@@ -79,12 +79,43 @@ weekday_from_date() {
     echo "$dow"
 }
 
+# Format relative time (e.g., "10 mins ago", "3 days ago")
+relative_time() {
+    local seconds=$1
+    local minutes=$((seconds / 60))
+    local hours=$((seconds / 3600))
+    local days=$((seconds / 86400))
+
+    if [ $days -gt 0 ]; then
+        if [ $days -eq 1 ]; then
+            echo "1 day ago"
+        else
+            echo "$days days ago"
+        fi
+    elif [ $hours -gt 0 ]; then
+        if [ $hours -eq 1 ]; then
+            echo "1 hour ago"
+        else
+            echo "$hours hours ago"
+        fi
+    elif [ $minutes -gt 0 ]; then
+        if [ $minutes -eq 1 ]; then
+            echo "1 min ago"
+        else
+            echo "$minutes mins ago"
+        fi
+    else
+        echo "just now"
+    fi
+}
+
 list_backups() {
     local dir=/backups
+    local now=$(date +%s 2>/dev/null || echo "$(/bin/date +%s)")
 
     echo
     echo "Available backups (current: $(date +"%Y-%m-%d %H:%M:%S"))"
-    echo "-----------------------------------------------------------------------------------"
+    echo "------------------------------------------------------------------------------------------------------------"
 
     mapfile -t backups < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -print | sort)
 
@@ -93,17 +124,23 @@ list_backups() {
         return 1
     fi
 
-    printf "%3s  %-25s  %-12s  %s\n" "#" "Date" "Size" "File"
+    printf "%3s  %-25s  %-15s  %-12s  %s\n" "#" "Date" "Relative" "Size" "File"
     local idx=1
     for f in "${backups[@]}"; do
         local bname=$(basename "$f")
         local ts=$(format_backup_timestamp "$bname")
         local size=$(human_size "$f")
-        printf "%3d  %-25s  %-12s  %s\n" "$idx" "$ts" "$size" "$bname"
+        local created_ts=$(file_mtime "$f")
+        local relative="unknown"
+        if [ -n "$created_ts" ]; then
+            local age=$((now - created_ts))
+            relative=$(relative_time "$age")
+        fi
+        printf "%3d  %-25s  %-15s  %-12s  %s\n" "$idx" "$ts" "$relative" "$size" "$bname"
         ((idx++))
     done
 
-    echo "-----------------------------------------------------------------------------------"
+    echo "------------------------------------------------------------------------------------------------------------"
     echo
     return 0
 }
