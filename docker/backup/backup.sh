@@ -48,7 +48,7 @@ allow_date() {
 
 format_backup_timestamp() {
     local filename=$1
-    if [[ $filename =~ ^backup_([0-9]{8}_[0-9]{6})(?:_manual)?\.tar\.gz$ ]]; then
+    if [[ $filename =~ ^backup_([0-9]{8}_[0-9]{6}).*\.tar\.gz$ ]]; then
         local ts=${BASH_REMATCH[1]}
         local y=${ts:0:4}
         local m=${ts:4:2}
