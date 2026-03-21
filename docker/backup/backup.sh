@@ -83,8 +83,10 @@ restore_backup() {
     echo "Restoring WordPress files..."
     tar -xzf "$FILES_ARCHIVE" -C /var/www/html
 
-    # Set proper permissions
-    chown -R www-data:www-data /var/www/html/wp-content
+    # Set proper permissions if www-data user exists
+    if id www-data > /dev/null 2>&1; then
+        chown -R www-data:www-data /var/www/html/wp-content
+    fi
 
     echo "Restore completed successfully!"
     echo "WordPress has been restored from the backup."

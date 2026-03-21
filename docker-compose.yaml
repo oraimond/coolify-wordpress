@@ -259,6 +259,22 @@ services:
       retries: 5
       start_period: 10s
     restart: unless-stopped
+  backup:
+    build:
+      context: ./docker/backup
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?wordpress}
+      WORDPRESS_DB_USER: ${SERVICE_USER_DB:?}
+      WORDPRESS_DB_PASSWORD: ${SERVICE_PASSWORD_DB:?}
+    volumes:
+      - wordpress_data:/var/www/html
+      - backups:/backups
+    command: ["sleep", "infinity"]
+    restart: unless-stopped
 volumes:
   db_data: null
   nginx_cache: null
