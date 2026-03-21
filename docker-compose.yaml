@@ -167,10 +167,11 @@ services:
           }
       - "nginx_cache:/var/cache/nginx"
     healthcheck:
-      test: ["CMD", "pgrep", "nginx"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
+      start_period: 20s
     restart: unless-stopped
   php:
     # image: "wordpress:php8.5-fpm-alpine"
@@ -216,10 +217,11 @@ services:
           opcache.jit_buffer_size=0
       - backups:/backups
     healthcheck:
-      test: ["CMD", "pgrep", "php-fpm"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000'"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
   db:
     image: "mariadb:12"
@@ -242,8 +244,9 @@ services:
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
-      timeout: 20s
+      timeout: 5s
       retries: 10
+      start_period: 30s
     restart: unless-stopped
   redis:
     image: "redis:8-alpine"
@@ -253,7 +256,8 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
-      retries: 3
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 volumes:
   db_data: null
