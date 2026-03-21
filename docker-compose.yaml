@@ -38,9 +38,9 @@ services:
               image/svg+xml;
 
             fastcgi_cache_path /var/cache/nginx levels=1:2 keys_zone=WORDPRESS:100m inactive=60m;
-            fastcgi_cache_key "$scheme$request_method$host$request_uri";
+            fastcgi_cache_key "$$scheme$$request_method$$host$$request_uri";
 
-            limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+            limit_req_zone $$binary_remote_addr zone=login:10m rate=5r/m;
 
             include /etc/nginx/conf.d/*.conf;
           }
@@ -73,12 +73,12 @@ services:
             # -------------------------
             # Microcaching for logged-out users
             # -------------------------
-            set $skip_cache 0;
+            set $$skip_cache 0;
 
-            if ($request_method = POST) { set $skip_cache 1; }
-            if ($query_string != "") { set $skip_cache 1; }
-            if ($request_uri ~* "/wp-admin/|/wp-login.php") { set $skip_cache 1; }
-            if ($http_cookie ~* "wordpress_logged_in_") { set $skip_cache 1; }
+            if ($$request_method = POST) { set $$skip_cache 1; }
+            if ($$query_string != "") { set $$skip_cache 1; }
+            if ($$request_uri ~* "/wp-admin/|/wp-login.php") { set $$skip_cache 1; }
+            if ($$http_cookie ~* "wordpress_logged_in_") { set $$skip_cache 1; }
 
             # -------------------------
             # Rate-limit login attempts
@@ -89,7 +89,7 @@ services:
 
                 include fastcgi_params;
                 fastcgi_pass php:9000;
-                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                fastcgi_param SCRIPT_FILENAME $$document_root$$fastcgi_script_name;
 
                 fastcgi_read_timeout 120;
             }
@@ -104,12 +104,12 @@ services:
             # -------------------------
             # Allow large uploads for admin endpoints only
             # -------------------------
-            location ~* ^/wp-admin/(update\.php|async-upload\.php|admin-ajax\.php)$ {
+            location ~* ^/wp-admin/(update\.php|async-upload\.php|admin-ajax\.php)$$ {
                 client_max_body_size 1G;
 
                 include fastcgi_params;
                 fastcgi_pass php:9000;
-                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                fastcgi_param SCRIPT_FILENAME $$document_root$$fastcgi_script_name;
 
                 fastcgi_read_timeout 600;   # 10 minutes
                 fastcgi_send_timeout 600;   # 10 minutes
@@ -120,10 +120,10 @@ services:
             # -------------------------
             # PHP-FPM for all other requests
             # -------------------------
-            location ~ \.php$ {
+            location ~ \.php$$ {
                 include fastcgi_params;
                 fastcgi_pass php:9000;
-                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                fastcgi_param SCRIPT_FILENAME $$document_root$$fastcgi_script_name;
 
                 # FastCGI timeouts
                 fastcgi_connect_timeout 60;
@@ -134,18 +134,18 @@ services:
 
                 # Cache frontend pages only
                 fastcgi_cache WORDPRESS;
-                fastcgi_cache_bypass $skip_cache;
-                fastcgi_no_cache $skip_cache;
+                fastcgi_cache_bypass $$skip_cache;
+                fastcgi_no_cache $$skip_cache;
                 fastcgi_cache_valid 200 60m;
                 fastcgi_cache_valid 404 10m;
 
-                add_header X-FastCGI-Cache $upstream_cache_status;
+                add_header X-FastCGI-Cache $$upstream_cache_status;
             }
 
             # -------------------------
             # Static file caching
             # -------------------------
-            location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff2?|webp)$ {
+            location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff2?|webp)$$ {
                 expires 1y;
                 add_header Cache-Control "public, immutable";
                 access_log off;
@@ -155,7 +155,7 @@ services:
             # Default location
             # -------------------------
             location / {
-                try_files $uri $uri/ /index.php?$args;
+                try_files $$uri $$uri/ /index.php?$$args;
             }
 
             # -------------------------
@@ -214,6 +214,7 @@ services:
 
           opcache.jit=0
           opcache.jit_buffer_size=0
+      - backups:/backups
     healthcheck:
       test: ["CMD", "pgrep", "php-fpm"]
       interval: 10s
@@ -259,3 +260,4 @@ volumes:
   nginx_cache: null
   redis_data: null
   wordpress_data: null
+  backups: null

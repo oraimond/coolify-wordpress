@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     less \
     libzip-dev \
     zip \
+    mariadb-client \
     $PHPIZE_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,6 +24,10 @@ RUN curl -o /usr/local/bin/wp -SL https://raw.githubusercontent.com/wp-cli/build
 # Copy custom entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Copy backup script
+COPY backup.sh /usr/local/bin/wp-backup
+RUN chmod +x /usr/local/bin/wp-backup
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["php-fpm"]
