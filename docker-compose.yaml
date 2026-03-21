@@ -273,7 +273,7 @@ services:
     volumes:
       - wordpress_data:/var/www/html
       - backups:/backups
-    command: ["sleep", "infinity"]
+    command: ["crond", "-f", "-L", "/dev/stdout"]
     healthcheck:
       test: ["CMD-SHELL", "[ -d /backups ] && echo ok || exit 1"]
       interval: 30s

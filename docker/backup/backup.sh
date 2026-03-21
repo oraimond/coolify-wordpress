@@ -9,9 +9,37 @@ get_db_credentials() {
     DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
 }
 
-# Format bytes to human readable (default from du -h if available)
+# Format bytes to human readable
 human_size() {
-    du -h --apparent-size --block-size=1 "$1" 2>/dev/null | awk '{print $1}' || du -h "$1" 2>/dev/null | awk '{print $1}'
+    local file="$1"
+    if [ ! -e "$file" ]; then
+        echo "N/A"
+        return 1
+    fi
+
+    # Try du (human-readable)
+    local size
+    size=$(du -h "$file" 2>/dev/null | awk 'NR==1{print $1}')
+    if [ -n "$size" ]; then
+        echo "$size"
+        return 0
+    fi
+
+    # Try ls -lh
+    size=$(ls -lh "$file" 2>/dev/null | awk '{print $5}')
+    if [ -n "$size" ]; then
+        echo "$size"
+        return 0
+    fi
+
+    # Try stat raw bytes
+    size=$(stat -c%s "$file" 2>/dev/null)
+    if [ -n "$size" ]; then
+        echo "${size}B"
+        return 0
+    fi
+
+    echo "unknown"
 }
 
 format_backup_timestamp() {
@@ -58,7 +86,15 @@ list_backups() {
 
 # Function to create backup
 create_backup() {
-    echo "Creating WordPress backup..."
+    local manual=${1:-0}
+
+    if [ "$manual" -eq 1 ]; then
+        echo "Creating manual WordPress backup..."
+        suffix="_manual"
+    else
+        echo "Creating WordPress backup..."
+        suffix=""
+    fi
 
     get_db_credentials
 
@@ -75,7 +111,7 @@ create_backup() {
     tar -czf "$BACKUP_DIR/files_$TIMESTAMP.tar.gz" -C /var/www/html wp-content
 
     # Create combined backup archive
-    BACKUP_FILE="$BACKUP_DIR/backup_$TIMESTAMP.tar.gz"
+    BACKUP_FILE="$BACKUP_DIR/backup_${TIMESTAMP}${suffix}.tar.gz"
     echo "Creating combined backup archive..."
     tar -czf "$BACKUP_FILE" -C "$BACKUP_DIR" "db_$TIMESTAMP.sql" "files_$TIMESTAMP.tar.gz"
 
@@ -161,28 +197,99 @@ restore_backup() {
     echo "WordPress has been restored from the backup."
 }
 
-# Main script logic
+cleanup_backups() {
+    local dir=/backups
+    local now=$(date +%s)
+
+    # Keep manual backups forever
+    local keep_recent=2
+    local recent_count=0
+
+    # Step 1: cleanup old and non-sunday regional backups
+    find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' | while read -r f; do
+        local bname=$(basename "$f")
+        local ts=$(echo "$bname" | sed -E 's/^backup_([0-9]{8}_[0-9]{6}).*\.tar\.gz$/\1/')
+        [ -z "$ts" ] && continue
+        local created=$(date -d "${ts:0:8} ${ts:9:6}" +%s 2>/dev/null || true)
+        [ -z "$created" ] && continue
+
+        local age=$(( (now-created) / 86400 ))
+        local dow=$(date -d "${ts:0:8} ${ts:9:6}" +%u 2>/dev/null || echo 0)
+
+        if [ "$age" -gt 14 ]; then
+            rm -f "$f"
+            continue
+        fi
+
+        if [ "$age" -gt 3 ] && [ "$dow" != "7" ]; then
+            rm -f "$f"
+            continue
+        fi
+    done
+
+    # Step 2: ensure at least 2 recent backups in last 72h
+    mapfile -t recent < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' -mtime -3 -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk '{print $2}')
+    for f in "${recent[@]}"; do
+        if [ "$recent_count" -lt "$keep_recent" ]; then
+            ((recent_count++))
+            continue
+        fi
+        rm -f "$f"
+    done
+
+    # Step 3: ensure at least one 1-2 weeks old backup exists (or sunday backup)
+    local week_old=$(date -d '7 days ago' +%s)
+    local two_weeks_old=$(date -d '14 days ago' +%s)
+    local selected=""
+
+    # Find non-manual backup between 7 and 14 days
+    mapfile -t candidates < <(find "$dir" -maxdepth 1 -name 'backup_*.tar.gz' -not -name '*_manual.tar.gz' -mtime +6 -mtime -14 -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk '{print $2}')
+    if [ ${#candidates[@]} -gt 0 ]; then
+        selected=${candidates[0]}
+    fi
+
+    # Keep selected candidate if it exists and not already removed
+    if [ -n "$selected" ] && [ -f "$selected" ]; then
+        echo "Retaining 1-2 weeks backup: $selected"
+    fi
+}
+
 case "$1" in
     backup)
-        create_backup
+        local manual=1
+        if [ "$2" == "--auto" ] || [ "$2" == "-a" ]; then
+            manual=0
+        fi
+        create_backup "$manual"
+
+        # Only run cleanup for automatic backups to avoid touching manual archives
+        if [ "$manual" -eq 0 ]; then
+            cleanup_backups
+        fi
         ;;
     restore)
         restore_backup "$2"
+        ;;
+    cleanup)
+        cleanup_backups
         ;;
     *)
         echo "WordPress Backup/Restore Tool"
         echo ""
         echo "Usage:"
-        echo "  wp-backup backup                    Create a new backup"
-        echo "  wp-backup restore [backup_file]     Restore from a backup file (interactive when omitted)"
+        echo "  wp-backup backup [--auto]            Create a new backup (default = manual)"
+        echo "  wp-backup restore [backup_file]      Restore from a backup file (interactive when omitted)"
+        echo "  wp-backup cleanup                    Apply retention policy"
         echo ""
         echo "Examples:"
         echo "  wp-backup backup"
-        echo "  wp-backup restore /backups/backup_20240321_120000.tar.gz"
+        echo "  wp-backup backup --manual"
         echo "  wp-backup restore"
+        echo "  wp-backup restore /backups/backup_20240321_120000.tar.gz"
+        echo "  wp-backup cleanup"
         echo ""
         echo "Note: Backups are stored in /backups directory inside the container."
-        echo "Make sure to mount this volume or copy files as needed."
+        echo "Manual backups are named *_manual.tar.gz and are retained indefinitely."
         exit 1
         ;;
 esac

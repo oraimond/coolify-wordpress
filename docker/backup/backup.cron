@@ -1,0 +1,2 @@
+# Run daily backup at 02:00 (automatic)
+0 2 * * * /usr/local/bin/wp-backup backup --auto && /usr/local/bin/wp-backup cleanup
