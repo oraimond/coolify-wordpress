@@ -6,20 +6,21 @@ RUN apk add --no-cache \
     bash \
     tar \
     gzip \
-    dcron \
     && rm -rf /var/cache/apk/*
 
 # Create backup directory
 RUN mkdir -p /backups
 
-# Copy backup script and cron definition
+# Copy backup script
 COPY backup.sh /usr/local/bin/wp-backup
 RUN chmod +x /usr/local/bin/wp-backup
-COPY backup.cron /etc/crontabs/root
-RUN chmod 644 /etc/crontabs/root
 
 # Set working directory
 WORKDIR /backups
 
-# Default command to run cron in foreground
-CMD ["crond", "-f", "-L", "/dev/stdout"]
+# Copy internal scheduler
+COPY run-backup-scheduler.sh /usr/local/bin/run-backup-scheduler.sh
+RUN chmod +x /usr/local/bin/run-backup-scheduler.sh
+
+# Default command: run scheduler that triggers only 02:00-02:59
+CMD ["/usr/local/bin/run-backup-scheduler.sh"]
