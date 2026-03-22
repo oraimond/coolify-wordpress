@@ -167,7 +167,7 @@ services:
           }
       - "nginx_cache:/var/cache/nginx"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1"]
+      test: ["CMD-SHELL", "curl -fL http://127.0.0.1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
